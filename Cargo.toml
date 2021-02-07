@@ -1,5 +1,5 @@
 [package]
-name = "rust-meterpreter"
+name = "venom"
 version = "0.1.0"
 authors = ["b1tg <b1tg@users.noreply.github.com>"]
 edition = "2018"
