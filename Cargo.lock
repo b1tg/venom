@@ -683,17 +683,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rust-meterpreter"
-version = "0.1.0"
-dependencies = [
- "byteorder",
- "rand",
- "reqwest",
- "rs_shellcode_bindings",
- "tokio",
-]
-
-[[package]]
 name = "ryu"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -983,6 +972,17 @@ name = "vcpkg"
 version = "0.2.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b00bca6106a5e23f3eee943593759b7fcddb00554332e856d990c893966879fb"
+
+[[package]]
+name = "venom"
+version = "0.1.0"
+dependencies = [
+ "byteorder",
+ "rand",
+ "reqwest",
+ "rs_shellcode_bindings",
+ "tokio",
+]
 
 [[package]]
 name = "want"

